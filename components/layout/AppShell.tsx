@@ -22,7 +22,15 @@ export function AppShell({ children }: { children: ReactNode }) {
       return;
     }
     if (user.activeRole === "provider" && pathname === "/") {
-      router.replace("/provider");
+      router.replace(user.shopComplete === false ? "/provider/setup" : "/provider");
+      return;
+    }
+    if (
+      user.activeRole === "provider" &&
+      user.shopComplete === false &&
+      pathname !== "/provider/setup"
+    ) {
+      router.replace("/provider/setup");
     }
     if (user.activeRole === "customer" && pathname.startsWith("/provider")) {
       router.replace("/");

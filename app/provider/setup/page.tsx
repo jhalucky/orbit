@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/Button";
 import {
@@ -14,13 +15,13 @@ import { api, ApiError } from "@/lib/api";
 import { useApp } from "@/lib/app-context";
 import type { Category, ProviderBusiness } from "@/lib/types";
 
-export default function ProviderProfilePage() {
-  const { refreshUser, neighbourhoods } = useApp();
+export default function ProviderSetupPage() {
+  const router = useRouter();
+  const { refreshUser, neighbourhoods, user } = useApp();
   const [categories, setCategories] = useState<Category[]>([]);
   const [places, setPlaces] = useState(neighbourhoods);
   const [draft, setDraft] = useState<ShopDraft>(emptyShopDraft());
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -35,10 +36,12 @@ export default function ProviderProfilePage() {
       .then((shop) => {
         setDraft({
           name: shop.name,
-          categoryId: shop.categoryId,
+          categoryId: shop.categoryId === "more" && !shop.profileComplete ? "" : shop.categoryId,
           locationId: shop.locationId ?? "",
-          address: shop.address,
-          description: shop.description,
+          address: shop.address.includes("Add your address") ? "" : shop.address,
+          description: shop.description.includes("Tell customers what you do")
+            ? ""
+            : shop.description,
           typicalResponseMinutes: shop.typicalResponseMinutes,
           hours: shop.hours.length ? shop.hours : emptyShopDraft().hours,
           services: shop.services.length
@@ -51,7 +54,6 @@ export default function ProviderProfilePage() {
 
   async function save() {
     setError(null);
-    setSaved(false);
     setPending(true);
     try {
       await api("/provider/business", {
@@ -59,9 +61,9 @@ export default function ProviderProfilePage() {
         body: JSON.stringify(shopPayload(draft)),
       });
       await refreshUser();
-      setSaved(true);
+      router.replace("/provider");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save");
+      setError(err instanceof ApiError ? err.message : "Could not save your shop");
     } finally {
       setPending(false);
     }
@@ -70,13 +72,13 @@ export default function ProviderProfilePage() {
   return (
     <AppShell>
       <div className="mx-auto max-w-[36rem] px-4 py-8 md:px-8 md:py-10">
-        <p className="text-[12px] text-ink-soft">Business profile</p>
+        <p className="text-[12px] text-ink-soft">Set up your shop</p>
         <h1 className="mt-4 font-display text-[2rem] leading-tight font-medium text-ink">
-          How customers see you.
+          How should customers find you?
         </h1>
         <p className="mt-3 text-[15px] leading-6 text-ink-soft">
-          This is the shop listing on Discover. Change it whenever the work or
-          the address changes.
+          Name, neighbourhood, and the work you take. You can change this any
+          time from your dashboard.
         </p>
 
         <div className="mt-8">
@@ -89,16 +91,13 @@ export default function ProviderProfilePage() {
         </div>
 
         {error ? <p className="mt-4 text-[13px] text-accent">{error}</p> : null}
-        {saved ? (
-          <p className="mt-4 text-[13px] text-ink-soft">Saved. Discover will use this.</p>
-        ) : null}
 
         <Button
           className="mt-6"
           disabled={pending || !shopFormValid(draft)}
           onClick={() => void save()}
         >
-          {pending ? "Saving…" : "Save profile"}
+          {pending ? "Saving…" : `Publish ${user?.businessName ? "your shop" : "and open dashboard"}`}
         </Button>
       </div>
     </AppShell>

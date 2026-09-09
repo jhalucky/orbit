@@ -10,6 +10,12 @@ import type { RequestStatus } from "@/lib/types";
 
 interface Overview {
   businessName: string;
+  categoryLabel: string;
+  neighborhood: string;
+  city: string;
+  address: string;
+  profileComplete: boolean;
+  serviceCount: number;
   newRequests: number;
   inProgress: number;
   ready: number;
@@ -84,6 +90,46 @@ export default function ProviderOverviewPage() {
         <p className="mt-2 text-sm text-ink-soft">
           Today’s work from people nearby.
         </p>
+
+        {data && !data.profileComplete ? (
+          <div className="mt-6 rounded-[8px] border border-line bg-card px-4 py-4">
+            <p className="font-medium text-ink">Finish your shop listing</p>
+            <p className="mt-1 text-[13px] leading-5 text-ink-soft">
+              Add where you are, what you do, and the services you take so
+              customers can find you on Discover.
+            </p>
+            <Button size="sm" className="mt-3" href="/provider/setup">
+              Complete profile
+            </Button>
+          </div>
+        ) : null}
+
+        <div className="mt-8 rounded-[8px] border border-line bg-card px-4 py-4">
+          <p className="text-[12px] text-ink-soft">Your shop</p>
+          <p className="mt-1 font-medium text-ink">
+            {data?.businessName ?? user?.businessName}
+          </p>
+          <p className="mt-1 text-[13px] text-ink-soft">
+            {[data?.categoryLabel, data?.neighborhood, data?.city]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {data?.address ? (
+            <p className="mt-1 text-[13px] text-ink-soft">{data.address}</p>
+          ) : null}
+          <p className="mt-1 text-[13px] text-ink-soft">
+            {data?.serviceCount ?? 0}{" "}
+            {(data?.serviceCount ?? 0) === 1 ? "service" : "services"} listed
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" href="/provider/profile">
+              Edit profile
+            </Button>
+            <Button size="sm" variant="secondary" href="/provider/services">
+              Edit services
+            </Button>
+          </div>
+        </div>
 
         <dl className="mt-8 grid grid-cols-3 gap-3">
           <Stat label="New requests" value={data?.newRequests ?? 0} />

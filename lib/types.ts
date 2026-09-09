@@ -68,6 +68,7 @@ export interface SessionUser {
   locationAccuracyM: number | null;
   businessId: string | null;
   businessName: string | null;
+  shopComplete: boolean;
 }
 
 export interface ConversationSummary {
@@ -107,6 +108,34 @@ export interface ServiceRequest {
   statusLabel: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProviderService {
+  id?: string;
+  name: string;
+  description: string;
+}
+
+export interface ProviderBusiness {
+  id: string;
+  slug: string;
+  name: string;
+  categoryId: string;
+  categoryLabel: string;
+  description: string;
+  tags: string[];
+  address: string;
+  neighborhood: string;
+  city: string;
+  locationId: string | null;
+  lat: number;
+  lng: number;
+  hours: DayHours[];
+  typicalResponseMinutes: number;
+  monogram: string;
+  mark: string;
+  profileComplete: boolean;
+  services: ProviderService[];
 }
 
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {

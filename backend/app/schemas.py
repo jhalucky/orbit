@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Literal
 
@@ -20,6 +22,11 @@ class RegisterBody(BaseModel):
     name: str = Field(min_length=2)
     intent: Role
     business_name: str | None = None
+    category_id: str | None = None
+    location_id: str | None = None
+    address: str | None = None
+    description: str | None = None
+    services: list["ShopServiceIn"] = []
 
 
 class LoginBody(BaseModel):
@@ -31,6 +38,28 @@ class LoginBody(BaseModel):
 class RoleBody(BaseModel):
     role: Role
     business_name: str | None = None
+    category_id: str | None = None
+    location_id: str | None = None
+    address: str | None = None
+    description: str | None = None
+    services: list["ShopServiceIn"] = []
+
+
+class ShopServiceIn(BaseModel):
+    name: str = Field(min_length=2, max_length=80)
+    description: str = ""
+
+
+class ProviderBusinessUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=2, max_length=80)
+    category_id: str | None = None
+    location_id: str | None = None
+    address: str | None = Field(default=None, min_length=4, max_length=160)
+    description: str | None = Field(default=None, min_length=12, max_length=600)
+    typical_response_minutes: int | None = Field(default=None, ge=5, le=1440)
+    hours: list[dict[str, Any]] | None = None
+    services: list[ShopServiceIn] | None = None
+    tags: list[str] | None = None
 
 
 class MeUpdateBody(BaseModel):
@@ -117,6 +146,7 @@ class UserOut(BaseModel):
     locationAccuracyM: float | None = None
     businessId: str | None = None
     businessName: str | None = None
+    shopComplete: bool = False
 
 
 class RequestOut(BaseModel):

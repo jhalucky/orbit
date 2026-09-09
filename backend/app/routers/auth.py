@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user, load_user
-from app.models import Business, BusinessMember, Neighbourhood, User, UserRole, haversine_km
+from app.models import Neighbourhood, User, UserRole, haversine_km
 from app.schemas import LocateBody, LoginBody, MeUpdateBody, RegisterBody, RoleBody
 from app.security import (
     clear_session_cookie,
@@ -19,6 +19,7 @@ from app.security import (
     verify_password,
 )
 from app.serialize import user_out
+from app.shop import create_business
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -68,12 +69,21 @@ def register(
         name=body.name.strip(),
         password_hash=hash_password(body.password),
         active_role=body.intent,
-        location_id="koramangala",
+        location_id=body.location_id or "koramangala",
     )
     db.add(user)
     db.add(UserRole(user_id=user.id, role=body.intent))
     if body.intent == "provider":
-        _create_business_for(db, user, body.business_name or f"{body.name}'s business")
+        _create_business_for(
+            db,
+            user,
+            body.business_name or f"{body.name}'s business",
+            category_id=body.category_id,
+            location_id=body.location_id,
+            address=body.address,
+            description=body.description,
+            services=[(item.name, item.description) for item in body.services],
+        )
     db.commit()
     user = load_user(db, user.id)
     set_session_cookie(response, user.id)
@@ -185,7 +195,16 @@ def choose_role(
         db.add(UserRole(user_id=user.id, role=body.role))
     user.active_role = body.role
     if body.role == "provider" and not user.memberships:
-        _create_business_for(db, user, body.business_name or f"{user.name}'s business")
+        _create_business_for(
+            db,
+            user,
+            body.business_name or f"{user.name}'s business",
+            category_id=body.category_id,
+            location_id=body.location_id,
+            address=body.address,
+            description=body.description,
+            services=[(item.name, item.description) for item in body.services],
+        )
     db.commit()
     loaded = load_user(db, user.id)
     return user_out(loaded).model_dump()
@@ -284,35 +303,24 @@ def google_callback(
     return response
 
 
-def _create_business_for(db: Session, user: User, name: str) -> Business:
-    slug = f"{name.lower().replace(' ', '-')}-{user.id[:8]}"
-    business = Business(
-        id=str(uuid4()),
-        slug=slug,
-        name=name.strip(),
-        category_id="more",
-        description="Tell customers what you do. You can edit this from your business profile.",
-        tags=[],
-        rating=0,
-        review_count=0,
-        lat=12.9352,
-        lng=77.6245,
-        neighborhood="Koramangala",
-        address="Add your address in Settings",
-        hours=[
-            {"day": day, "open": "09:00", "close": "19:00", "closed": day == 0}
-            for day in range(7)
-        ],
-        typical_response_minutes=30,
-        monogram=(name.strip()[:2] or "OR").upper(),
-        mark="line",
+def _create_business_for(
+    db: Session,
+    user: User,
+    name: str,
+    *,
+    category_id: str | None = None,
+    location_id: str | None = None,
+    address: str | None = None,
+    description: str | None = None,
+    services: list[tuple[str, str]] | None = None,
+) -> None:
+    create_business(
+        db,
+        user,
+        name=name,
+        category_id=category_id,
+        location_id=location_id,
+        address=address,
+        description=description,
+        services=services,
     )
-    db.add(business)
-    db.add(
-        BusinessMember(
-            business_id=business.id,
-            user_id=user.id,
-            member_role="owner",
-        )
-    )
-    return business

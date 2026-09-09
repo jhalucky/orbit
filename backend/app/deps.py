@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.models import BusinessMember, User
+from app.models import Business, BusinessMember, User
 from app.security import decode_token, read_token
 
 
@@ -12,7 +12,9 @@ def load_user(db: Session, user_id: str) -> User | None:
         .options(
             selectinload(User.roles),
             selectinload(User.location),
-            selectinload(User.memberships).selectinload(BusinessMember.business),
+            selectinload(User.memberships)
+            .selectinload(BusinessMember.business)
+            .selectinload(Business.services),
         )
         .filter(User.id == user_id)
         .first()

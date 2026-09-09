@@ -1,4 +1,5 @@
 from app.models import Business, Neighbourhood, User
+from app.shop import shop_complete
 from app.schemas import BusinessOut, NeighbourhoodOut, UserOut
 
 STATUS_LABELS = {
@@ -42,6 +43,7 @@ def user_out(user: User) -> UserOut:
         locationAccuracyM=user.location_accuracy_m,
         businessId=membership.business_id if membership else None,
         businessName=membership.business.name if membership else None,
+        shopComplete=shop_complete(membership.business) if membership else False,
     )
 
 
@@ -71,3 +73,34 @@ def business_out(
         distanceKm=distance_km,
         saved=saved,
     )
+
+
+def provider_business_out(business: Business, *, location_id: str | None = None) -> dict:
+    return {
+        "id": business.id,
+        "slug": business.slug,
+        "name": business.name,
+        "categoryId": business.category_id,
+        "categoryLabel": business.category.label if business.category else "",
+        "description": business.description,
+        "tags": list(business.tags or []),
+        "address": business.address,
+        "neighborhood": business.neighborhood,
+        "city": business.city,
+        "locationId": location_id,
+        "lat": business.lat,
+        "lng": business.lng,
+        "hours": list(business.hours or []),
+        "typicalResponseMinutes": business.typical_response_minutes,
+        "monogram": business.monogram,
+        "mark": business.mark,
+        "profileComplete": shop_complete(business),
+        "services": [
+            {
+                "id": service.id,
+                "name": service.name,
+                "description": service.description or "",
+            }
+            for service in (business.services or [])
+        ],
+    }

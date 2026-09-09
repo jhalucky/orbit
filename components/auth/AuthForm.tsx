@@ -5,10 +5,17 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Wordmark } from "@/components/navigation/Wordmark";
+import {
+  ShopForm,
+  emptyShopDraft,
+  shopFormValid,
+  shopPayload,
+  type ShopDraft,
+} from "@/components/provider/ShopForm";
 import { api, ApiError } from "@/lib/api";
 import { useApp } from "@/lib/app-context";
 import { cn } from "@/lib/cn";
-import type { SessionUser } from "@/lib/types";
+import type { Category, LocationOption, SessionUser } from "@/lib/types";
 
 type Intent = "customer" | "provider";
 
@@ -24,6 +31,10 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [businessName, setBusinessName] = useState("");
+  const [shopStep, setShopStep] = useState(false);
+  const [draft, setDraft] = useState<ShopDraft>(emptyShopDraft());
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [places, setPlaces] = useState<LocationOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [google, setGoogle] = useState(false);
@@ -32,14 +43,39 @@ export function AuthForm({ mode }: AuthFormProps) {
     api<{ google: boolean }>("/auth/features", { skipAuthRedirect: true })
       .then((data) => setGoogle(data.google))
       .catch(() => setGoogle(false));
+    api<Category[]>("/categories", { skipAuthRedirect: true })
+      .then(setCategories)
+      .catch(() => setCategories([]));
+    api<LocationOption[]>("/neighbourhoods", { skipAuthRedirect: true })
+      .then(setPlaces)
+      .catch(() => setPlaces([]));
   }, []);
+
+  function afterAuth(user: SessionUser) {
+    if (user.activeRole === "provider") {
+      router.replace(user.shopComplete ? "/provider" : "/provider/setup");
+      return;
+    }
+    router.replace("/");
+  }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (mode === "register" && intent === "provider" && !shopStep) {
+      if (businessName.trim().length < 2) {
+        setError("Give your business a name.");
+        return;
+      }
+      setDraft((current) => ({ ...current, name: businessName.trim() }));
+      setShopStep(true);
+      setError(null);
+      return;
+    }
     setError(null);
     setPending(true);
     try {
       const path = mode === "login" ? "/auth/login" : "/auth/register";
+      const shop = shopPayload(draft);
       const body =
         mode === "login"
           ? { email, password, intent }
@@ -48,7 +84,12 @@ export function AuthForm({ mode }: AuthFormProps) {
               password,
               name,
               intent,
-              business_name: intent === "provider" ? businessName : undefined,
+              business_name: intent === "provider" ? shop.name || businessName : undefined,
+              category_id: intent === "provider" ? shop.category_id : undefined,
+              location_id: intent === "provider" ? shop.location_id : undefined,
+              address: intent === "provider" ? shop.address : undefined,
+              description: intent === "provider" ? shop.description : undefined,
+              services: intent === "provider" ? shop.services : undefined,
             };
       const user = await api<SessionUser>(path, {
         method: "POST",
@@ -56,7 +97,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         skipAuthRedirect: true,
       });
       await refreshUser();
-      router.replace(user.activeRole === "provider" ? "/provider" : "/");
+      afterAuth(user);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not sign in");
     } finally {
@@ -66,32 +107,44 @@ export function AuthForm({ mode }: AuthFormProps) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-paper px-4 py-10">
-      <div className="mx-auto w-full max-w-[26rem]">
+      <div className={cn("mx-auto w-full", shopStep ? "max-w-[32rem]" : "max-w-[26rem]")}>
         <Wordmark />
         <p className="mt-8 font-display text-[2rem] leading-tight font-medium text-ink">
-          {mode === "login" ? "Welcome back." : "Join Orbit."}
+          {mode === "login"
+            ? "Welcome back."
+            : shopStep
+              ? "Your shop."
+              : "Join Orbit."}
         </p>
         <p className="mt-2 text-sm leading-6 text-ink-soft">
           {mode === "login"
             ? "Sign in as a customer or as a business."
-            : "Find help nearby, or receive work from people around you."}
+            : shopStep
+              ? "Where you work, and what people can ask you for."
+              : "Find help nearby, or receive work from people around you."}
         </p>
 
         <div className="mt-6 flex border-b border-line">
           <IntentTab
             label="I need a service"
             active={intent === "customer"}
-            onClick={() => setIntent("customer")}
+            onClick={() => {
+              setIntent("customer");
+              setShopStep(false);
+            }}
           />
           <IntentTab
             label="I run a business"
             active={intent === "provider"}
-            onClick={() => setIntent("provider")}
+            onClick={() => {
+              setIntent("provider");
+              setShopStep(false);
+            }}
           />
         </div>
 
         <form className="mt-6 flex flex-col gap-3" onSubmit={onSubmit}>
-          {mode === "register" ? (
+          {!shopStep && mode === "register" ? (
             <Input
               name="name"
               placeholder="Your name"
@@ -100,24 +153,37 @@ export function AuthForm({ mode }: AuthFormProps) {
               required
             />
           ) : null}
-          <Input
-            name="email"
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-          <Input
-            name="password"
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            minLength={8}
-            required
-          />
-          {mode === "register" && intent === "provider" ? (
+          {!shopStep ? (
+            <>
+              <Input
+                name="email"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+              <Input
+                name="password"
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={8}
+                required
+              />
+            </>
+          ) : null}
+          {mode === "register" && intent === "provider" && shopStep ? (
+            <ShopForm
+              value={draft}
+              onChange={setDraft}
+              categories={categories}
+              neighbourhoods={places}
+              showHours={false}
+            />
+          ) : null}
+          {mode === "register" && intent === "provider" && !shopStep ? (
             <Input
               name="business"
               placeholder="Business name"
@@ -129,9 +195,36 @@ export function AuthForm({ mode }: AuthFormProps) {
 
           {error ? <p className="text-[13px] text-accent">{error}</p> : null}
 
-          <Button type="submit" disabled={pending} className="mt-1 w-full">
-            {pending ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
+          <Button
+            type="submit"
+            disabled={
+              pending ||
+              (mode === "register" &&
+                intent === "provider" &&
+                shopStep &&
+                !shopFormValid(draft))
+            }
+            className="mt-1 w-full"
+          >
+            {pending
+              ? "Please wait…"
+              : mode === "login"
+                ? "Sign in"
+                : intent === "provider" && !shopStep
+                  ? "Continue"
+                  : mode === "register" && intent === "provider"
+                    ? "Create shop"
+                    : "Create account"}
           </Button>
+          {mode === "register" && intent === "provider" && shopStep ? (
+            <button
+              type="button"
+              className="text-[13px] text-ink-soft hover:text-ink"
+              onClick={() => setShopStep(false)}
+            >
+              Back
+            </button>
+          ) : null}
         </form>
 
         {google ? (
