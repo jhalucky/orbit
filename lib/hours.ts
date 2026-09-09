@@ -28,7 +28,7 @@ function minutesFromMidnight(time: string): number {
   return hours * 60 + minutes;
 }
 
-function formatClock(time: string): string {
+export function formatClock(time: string): string {
   const [hoursRaw, minutesRaw] = time.split(":").map(Number);
   const period = hoursRaw >= 12 ? "pm" : "am";
   const hours = hoursRaw % 12 || 12;
@@ -95,6 +95,26 @@ export function getAvailability(
   }
 
   return { isOpen: false, label: "Closed" };
+}
+
+export function hoursWeek(
+  hours: DayHours[],
+  now = new Date(),
+): Array<{ day: DayHours["day"]; name: string; label: string; today: boolean }> {
+  const today = getZonedClock(now).day;
+  return DAY_NAMES.map((name, day) => {
+    const entry = hoursForDay(hours, day as DayHours["day"]);
+    let label = "Closed";
+    if (entry && !entry.closed) {
+      label = `${formatClock(entry.open)} – ${formatClock(entry.close)}`;
+    }
+    return {
+      day: day as DayHours["day"],
+      name,
+      label,
+      today: day === today,
+    };
+  });
 }
 
 export function formatResponseTime(minutes: number): string {

@@ -8,7 +8,7 @@ import Link from "next/link";
 const ICON = { size: 20, strokeWidth: 1.65 };
 
 const ITEMS = [
-  { href: "/", label: "Discover", icon: Compass, match: (path: string) => path === "/" },
+  { href: "/", label: "Discover", icon: Compass, match: (path: string) => path === "/" || path.startsWith("/business") },
   { href: "/requests", label: "Requests", icon: Inbox, match: (path: string) => path.startsWith("/requests") },
   { href: "/messages", label: "Messages", icon: MessagesSquare, match: (path: string) => path.startsWith("/messages") },
   { href: "/saved", label: "Saved", icon: Bookmark, match: (path: string) => path.startsWith("/saved") },

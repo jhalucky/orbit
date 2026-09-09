@@ -143,7 +143,11 @@ def get_business(
         saved=saved,
     ).model_dump()
     payload["services"] = [
-        {"id": service.id, "name": service.name, "description": service.description}
+        {
+            "id": service.id,
+            "name": service.name,
+            "description": service.description or "",
+        }
         for service in business.services
     ]
     return payload

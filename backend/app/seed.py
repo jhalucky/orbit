@@ -675,4 +675,17 @@ def ensure_okhla(db: Session) -> None:
     for business in make_okhla_businesses():
         if business.id not in existing:
             db.add(business)
+    db.flush()
+    served = {item[0] for item in db.query(Service.business_id).distinct()}
+    for business in make_okhla_businesses():
+        if business.id in served:
+            continue
+        for index, tag in enumerate(business.tags or []):
+            db.add(
+                Service(
+                    id=f"svc_{business.id}_{index}",
+                    business_id=business.id,
+                    name=tag,
+                )
+            )
     db.commit()

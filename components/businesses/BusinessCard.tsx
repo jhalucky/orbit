@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bookmark, CornerUpRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
@@ -38,11 +39,17 @@ export function BusinessCard({
       )}
     >
       <div className={cn("flex gap-3", featured && "md:w-[3.25rem] md:shrink-0")}>
-        <Monogram
-          letters={business.monogram}
-          mark={business.mark}
-          large={featured}
-        />
+        <Link
+          href={`/business/${business.slug}`}
+          className="shrink-0"
+          aria-label={`${business.name} shop`}
+        >
+          <Monogram
+            letters={business.monogram}
+            mark={business.mark}
+            large={featured}
+          />
+        </Link>
         {featured ? (
           <div className="min-w-0 pr-8 md:hidden">
             <CardHeading business={business} distanceKm={distanceKm} featured />
@@ -98,10 +105,10 @@ export function BusinessCard({
         </div>
 
         <div className={cn("mt-4 flex flex-wrap items-center gap-2", featured && "md:mt-5")}>
-          <Button
-            size="sm"
-            href={`/messages?business=${business.id}`}
-          >
+          <Button size="sm" href={`/business/${business.slug}`}>
+            View shop
+          </Button>
+          <Button size="sm" variant="secondary" href={`/messages?business=${business.id}`}>
             Message
           </Button>
           <Button
@@ -166,7 +173,9 @@ function CardHeading({
             : "text-[15px] font-medium leading-snug",
         )}
       >
-        {business.name}
+        <Link href={`/business/${business.slug}`} className="hover:text-accent">
+          {business.name}
+        </Link>
       </h3>
       <p className="mt-0.5 text-[12px] text-ink-soft">
         {business.neighborhood}

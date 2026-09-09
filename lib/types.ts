@@ -50,6 +50,7 @@ export interface Business {
   mark: "fill" | "soft" | "line";
   distanceKm?: number | null;
   saved?: boolean;
+  services?: ProviderService[];
 }
 
 export interface SessionUser {
