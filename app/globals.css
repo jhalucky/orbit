@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #eae7dd;
+  --card: #f5f3eb;
+  --ink: #201d18;
+  --ink-soft: #55503f;
+  --line: #d7d1bf;
+  --accent: #b23a2e;
+  --accent-dark: #8f2c22;
+  --accent-soft: rgba(178, 58, 46, 0.12);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-soft: var(--accent-soft);
+
+  --font-sans: var(--font-work-sans), "Work Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Fraunces, ui-serif, Georgia, serif;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "kern" 1, "liga" 1, "ss01" 0;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
