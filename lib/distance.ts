@@ -19,6 +19,12 @@ export function distanceKm(from: GeoPoint, to: GeoPoint): number {
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
+export function nearestPoint<T extends GeoPoint>(from: GeoPoint, places: T[]): T {
+  return places.reduce((best, place) =>
+    distanceKm(from, place) < distanceKm(from, best) ? place : best,
+  );
+}
+
 export function formatDistance(km: number): string {
   if (km < 0.08) return "Nearby";
   if (km < 1) return `${(Math.round(km * 10) / 10).toFixed(1)} km`;

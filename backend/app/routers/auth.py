@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user, load_user
-from app.models import Business, BusinessMember, User, UserRole
-from app.schemas import LoginBody, MeUpdateBody, RegisterBody, RoleBody
+from app.models import Business, BusinessMember, Neighbourhood, User, UserRole, haversine_km
+from app.schemas import LocateBody, LoginBody, MeUpdateBody, RegisterBody, RoleBody
 from app.security import (
     clear_session_cookie,
     create_token,
@@ -30,6 +30,26 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 @router.get("/features")
 def features() -> dict[str, bool]:
     return {"google": settings.google_enabled}
+
+
+@router.get("/geo-hint")
+def geo_hint(_user: User = Depends(get_current_user)) -> dict:
+    try:
+        with httpx.Client(timeout=5.0) as client:
+            payload = client.get("https://ipwho.is/").json()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail="Could not estimate your location") from exc
+    lat = payload.get("latitude")
+    lng = payload.get("longitude")
+    if not isinstance(lat, (int, float)) or not isinstance(lng, (int, float)):
+        raise HTTPException(status_code=502, detail="Could not estimate your location")
+    return {
+        "lat": float(lat),
+        "lng": float(lng),
+        "source": "network",
+        "accuracyM": None,
+        "city": payload.get("city"),
+    }
 
 
 @router.post("/register")
@@ -102,6 +122,14 @@ def update_me(
 ) -> dict:
     if body.location_id is not None:
         user.location_id = body.location_id
+        if body.lat is None and body.lng is None:
+            place = db.query(Neighbourhood).filter(Neighbourhood.id == body.location_id).first()
+            if place:
+                user.lat = place.lat
+                user.lng = place.lng
+            user.using_device_location = False
+            user.location_source = None
+            user.location_accuracy_m = None
     if body.active_role:
         if body.active_role not in user.role_names:
             raise HTTPException(status_code=400, detail="You don’t have that role yet")
@@ -110,6 +138,38 @@ def update_me(
         user.lat = body.lat
     if body.lng is not None:
         user.lng = body.lng
+    db.commit()
+    loaded = load_user(db, user.id)
+    return user_out(loaded).model_dump()
+
+
+@router.post("/locate")
+def locate_me(
+    body: LocateBody,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> dict:
+    places = db.query(Neighbourhood).all()
+    if not places:
+        raise HTTPException(status_code=400, detail="No neighbourhoods are set up yet")
+    nearest = min(
+        places,
+        key=lambda place: haversine_km(body.lat, body.lng, place.lat, place.lng),
+    )
+    km = haversine_km(body.lat, body.lng, nearest.lat, nearest.lng)
+    user.location_id = nearest.id
+    if km <= 40:
+        user.lat = body.lat
+        user.lng = body.lng
+        user.using_device_location = True
+        user.location_source = body.source
+        user.location_accuracy_m = body.accuracy_m
+    else:
+        user.lat = nearest.lat
+        user.lng = nearest.lng
+        user.using_device_location = False
+        user.location_source = None
+        user.location_accuracy_m = None
     db.commit()
     loaded = load_user(db, user.id)
     return user_out(loaded).model_dump()

@@ -169,6 +169,8 @@ function CardHeading({
         {business.name}
       </h3>
       <p className="mt-0.5 text-[12px] text-ink-soft">
+        {business.neighborhood}
+        <span className="mx-1.5 text-line">·</span>
         {business.categoryLabel}
         <span className="mx-1.5 text-line">·</span>
         {formatDistance(distanceKm)}

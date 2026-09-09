@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import BACKEND_ROOT, settings
-from app.database import Base, SessionLocal, engine
+from app.database import Base, SessionLocal, engine, ensure_schema
 from app.routers import auth, catalog, chat, provider, requests
-from app.seed import seed_if_empty
+from app.seed import ensure_okhla, seed_if_empty
 
 (BACKEND_ROOT / "data").mkdir(exist_ok=True)
 
@@ -30,9 +30,11 @@ def startup() -> None:
     import app.models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    ensure_schema()
     db = SessionLocal()
     try:
         seed_if_empty(db)
+        ensure_okhla(db)
     finally:
         db.close()
 

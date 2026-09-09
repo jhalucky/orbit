@@ -8,6 +8,36 @@ from app.serialize import business_out, neighbourhood_out
 
 router = APIRouter(tags=["catalog"])
 
+DEFAULT_LAT = 12.9352
+DEFAULT_LNG = 77.6245
+NEARBY_KM = 40
+
+
+def origin_for(
+    user: User,
+    lat: float | None = None,
+    lng: float | None = None,
+) -> tuple[float, float]:
+    origin_lat = (
+        lat
+        if lat is not None
+        else user.lat
+        if user.lat is not None
+        else user.location.lat
+        if user.location
+        else DEFAULT_LAT
+    )
+    origin_lng = (
+        lng
+        if lng is not None
+        else user.lng
+        if user.lng is not None
+        else user.location.lng
+        if user.location
+        else DEFAULT_LNG
+    )
+    return origin_lat, origin_lng
+
 
 @router.get("/neighbourhoods")
 def list_neighbourhoods(db: Session = Depends(get_db)) -> list[dict]:
@@ -41,8 +71,7 @@ def list_businesses(
         ]
         query = query.filter(Business.id.in_(saved_ids or ["__none__"]))
 
-    origin_lat = lat if lat is not None else (user.location.lat if user.location else 12.9352)
-    origin_lng = lng if lng is not None else (user.location.lng if user.location else 77.6245)
+    origin_lat, origin_lng = origin_for(user, lat, lng)
 
     saved_set = {
         row.business_id
@@ -65,6 +94,8 @@ def list_businesses(
             if needle not in haystack:
                 continue
         distance = haversine_km(origin_lat, origin_lng, business.lat, business.lng)
+        if not saved and distance > NEARBY_KM:
+            continue
         results.append(
             business_out(
                 business,
@@ -80,6 +111,8 @@ def list_businesses(
 @router.get("/businesses/{slug}")
 def get_business(
     slug: str,
+    lat: float | None = None,
+    lng: float | None = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> dict:
@@ -94,8 +127,7 @@ def get_business(
 
         raise HTTPException(status_code=404, detail="Business not found")
 
-    origin_lat = user.location.lat if user.location else 12.9352
-    origin_lng = user.location.lng if user.location else 77.6245
+    origin_lat, origin_lng = origin_for(user, lat, lng)
     saved = (
         db.query(SavedBusiness)
         .filter(

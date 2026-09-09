@@ -6,19 +6,27 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { api } from "@/lib/api";
+import { getBrowserLocation, getSilentLocation, type LocationFix } from "@/lib/geolocation";
+import { distanceKm, nearestPoint } from "@/lib/distance";
 import type { LocationOption, SessionUser } from "@/lib/types";
+
+const MANUAL_LOCATION_KEY = "orbit_location_manual";
+const NEAR_KM = 40;
 
 interface AppState {
   user: SessionUser | null;
   loading: boolean;
   neighbourhoods: LocationOption[];
   location: LocationOption | null;
+  usingDeviceLocation: boolean;
   savedIds: Set<string>;
-  setLocation: (location: LocationOption) => void;
+  setLocation: (location: LocationOption, options?: { manual?: boolean }) => void;
+  locateMe: () => Promise<void>;
   toggleSaved: (businessId: string) => void;
   isSaved: (businessId: string) => boolean;
   refreshUser: () => Promise<void>;
@@ -32,6 +40,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [neighbourhoods, setNeighbourhoods] = useState<LocationOption[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const autoTriedRef = useRef(false);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -92,21 +101,70 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const location =
-    user?.location ??
-    neighbourhoods.find((item) => item.id === user?.locationId) ??
-    neighbourhoods[0] ??
-    null;
+  const usingDeviceLocation = Boolean(user?.usingDeviceLocation);
 
-  const setLocation = useCallback((next: LocationOption) => {
+  const location = useMemo((): LocationOption | null => {
+    const place =
+      user?.location ??
+      neighbourhoods.find((item) => item.id === user?.locationId) ??
+      neighbourhoods[0] ??
+      null;
+    if (!place) return null;
+
+    const lat = user?.lat ?? place.lat;
+    const lng = user?.lng ?? place.lng;
+    let label = place.label;
+    if (user?.usingDeviceLocation && user.lat != null && user.lng != null) {
+      const km = distanceKm({ lat: user.lat, lng: user.lng }, place);
+      label = km > 20 ? "Near you" : `Near ${place.label}`;
+    }
+    return { ...place, lat, lng, label };
+  }, [neighbourhoods, user]);
+
+  const setLocation = useCallback((next: LocationOption, options?: { manual?: boolean }) => {
+    if (options?.manual !== false && typeof window !== "undefined") {
+      sessionStorage.setItem(MANUAL_LOCATION_KEY, "1");
+    }
     setUser((current) =>
-      current ? { ...current, locationId: next.id, location: next } : current,
+      current
+        ? {
+            ...current,
+            locationId: next.id,
+            location: next,
+            lat: next.lat,
+            lng: next.lng,
+            usingDeviceLocation: false,
+            locationSource: null,
+            locationAccuracyM: null,
+          }
+        : current,
     );
     void api("/auth/me", {
       method: "PATCH",
       body: JSON.stringify({ location_id: next.id }),
     }).catch(() => undefined);
   }, []);
+
+  const applyFix = useCallback(async (point: LocationFix) => {
+    const next = await api<SessionUser>("/auth/locate", {
+      method: "POST",
+      body: JSON.stringify({
+        lat: point.lat,
+        lng: point.lng,
+        source: point.source,
+        accuracy_m: point.accuracyM,
+      }),
+    });
+    setUser(next);
+  }, []);
+
+  const locateMe = useCallback(async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(MANUAL_LOCATION_KEY);
+    }
+    const point = await getBrowserLocation();
+    await applyFix(point);
+  }, [applyFix]);
 
   const toggleSaved = useCallback(async (businessId: string) => {
     setSavedIds((current) => {
@@ -127,10 +185,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(MANUAL_LOCATION_KEY);
+    }
+    autoTriedRef.current = false;
     await api("/auth/logout", { method: "POST", skipAuthRedirect: true });
     setUser(null);
     window.location.replace("/login");
   }, []);
+
+  useEffect(() => {
+    if (!user) autoTriedRef.current = false;
+  }, [user]);
+
+  useEffect(() => {
+    if (loading || !user || neighbourhoods.length === 0) return;
+    if (autoTriedRef.current) return;
+    autoTriedRef.current = true;
+    const savedId = user.locationId;
+    const deviceOn = Boolean(user.usingDeviceLocation);
+    void (async () => {
+      try {
+        const point = await getSilentLocation();
+        const nearest = nearestPoint(point, neighbourhoods);
+        const nearKm = distanceKm(point, nearest);
+        const saved = neighbourhoods.find((place) => place.id === savedId);
+        const savedKm = saved ? distanceKm(point, saved) : Number.POSITIVE_INFINITY;
+        const locked =
+          typeof window !== "undefined" &&
+          sessionStorage.getItem(MANUAL_LOCATION_KEY) === "1";
+        if (locked && saved && savedKm <= NEAR_KM) {
+          return;
+        }
+        if (nearKm <= NEAR_KM) {
+          await applyFix(point);
+          return;
+        }
+        if (savedId !== nearest.id || deviceOn) {
+          setLocation(nearest, { manual: false });
+        }
+      } catch {
+        // Keep the saved neighbourhood if we cannot estimate a position.
+      }
+    })();
+  }, [applyFix, loading, neighbourhoods, setLocation, user]);
 
   const value = useMemo(
     () => ({
@@ -138,8 +236,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loading,
       neighbourhoods,
       location,
+      usingDeviceLocation,
       savedIds,
       setLocation,
+      locateMe,
       toggleSaved,
       isSaved,
       refreshUser,
@@ -149,6 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isSaved,
       loading,
       location,
+      locateMe,
       logout,
       neighbourhoods,
       refreshUser,
@@ -156,6 +257,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLocation,
       toggleSaved,
       user,
+      usingDeviceLocation,
     ],
   );
 

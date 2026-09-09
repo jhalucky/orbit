@@ -40,6 +40,13 @@ class MeUpdateBody(BaseModel):
     lng: float | None = None
 
 
+class LocateBody(BaseModel):
+    lat: float = Field(ge=-90, le=90)
+    lng: float = Field(ge=-180, le=180)
+    source: Literal["gps", "network"] = "gps"
+    accuracy_m: float | None = Field(default=None, ge=0)
+
+
 class RequestCreateBody(BaseModel):
     business_id: str
     title: str = Field(min_length=2)
@@ -103,6 +110,11 @@ class UserOut(BaseModel):
     activeRole: str | None
     locationId: str | None
     location: NeighbourhoodOut | None = None
+    lat: float | None = None
+    lng: float | None = None
+    usingDeviceLocation: bool = False
+    locationSource: Literal["gps", "network"] | None = None
+    locationAccuracyM: float | None = None
     businessId: str | None = None
     businessName: str | None = None
 

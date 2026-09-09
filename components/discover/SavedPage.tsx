@@ -8,14 +8,19 @@ import { api } from "@/lib/api";
 import type { Business } from "@/lib/types";
 
 export function SavedPage() {
-  const { isSaved, toggleSaved } = useApp();
+  const { isSaved, toggleSaved, location } = useApp();
   const [businesses, setBusinesses] = useState<Business[] | null>(null);
 
   useEffect(() => {
-    api<Business[]>("/businesses?saved=true")
+    const params = new URLSearchParams({ saved: "true" });
+    if (location) {
+      params.set("lat", String(location.lat));
+      params.set("lng", String(location.lng));
+    }
+    api<Business[]>(`/businesses?${params.toString()}`)
       .then(setBusinesses)
       .catch(() => setBusinesses([]));
-  }, [isSaved]);
+  }, [isSaved, location]);
 
   return (
     <AppShell>

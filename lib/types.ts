@@ -61,6 +61,11 @@ export interface SessionUser {
   activeRole: "customer" | "provider" | null;
   locationId: string | null;
   location: LocationOption | null;
+  lat: number | null;
+  lng: number | null;
+  usingDeviceLocation: boolean;
+  locationSource: "gps" | "network" | null;
+  locationAccuracyM: number | null;
   businessId: string | null;
   businessName: string | null;
 }

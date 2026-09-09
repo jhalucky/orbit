@@ -40,6 +40,9 @@ class User(Base):
     )
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    using_device_location: Mapped[bool] = mapped_column(Boolean, default=False)
+    location_source: Mapped[str | None] = mapped_column(String, nullable=True)
+    location_accuracy_m: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime,

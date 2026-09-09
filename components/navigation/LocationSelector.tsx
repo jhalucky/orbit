@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, MapPin } from "lucide-react";
+import { ChevronDown, LocateFixed, MapPin } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useApp } from "@/lib/app-context";
+import { GeolocationError, formatAccuracy, mapsCheckUrl } from "@/lib/geolocation";
 import type { LocationOption } from "@/lib/types";
 
 const ICON = { size: 16, strokeWidth: 1.65 };
@@ -17,8 +18,11 @@ interface LocationSelectorProps {
 export function LocationSelector({
   variant = "sidebar",
 }: LocationSelectorProps) {
-  const { location, setLocation, neighbourhoods } = useApp();
+  const { location, setLocation, neighbourhoods, locateMe, usingDeviceLocation, user } =
+    useApp();
   const [open, setOpen] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
 
@@ -44,9 +48,53 @@ export function LocationSelector({
   }, [open]);
 
   function choose(next: LocationOption) {
+    setError(null);
     setLocation(next);
     setOpen(false);
   }
+
+  async function useDeviceLocation() {
+    setError(null);
+    setLocating(true);
+    try {
+      await locateMe();
+    } catch (err) {
+      setError(
+        err instanceof GeolocationError
+          ? err.message
+          : "Couldn’t use your location. Pick a neighbourhood instead.",
+      );
+    } finally {
+      setLocating(false);
+    }
+  }
+
+  const snappedName = user?.location?.label;
+  const locateTitle = locating
+    ? "Finding you…"
+    : usingDeviceLocation && user?.locationSource === "network"
+      ? "Approximate location"
+      : usingDeviceLocation && user?.locationSource === "gps"
+        ? "Using GPS"
+        : usingDeviceLocation
+          ? "Using your location"
+          : "Use my current location";
+  const locateHint = locating
+    ? "GPS on a phone, or your network on a computer"
+    : usingDeviceLocation && user?.locationSource === "network"
+      ? snappedName
+        ? `From your network · nearest is ${snappedName}`
+        : "From your network · not street-level"
+      : usingDeviceLocation && user?.locationSource === "gps"
+        ? [
+            user.locationAccuracyM != null
+              ? formatAccuracy(user.locationAccuracyM)
+              : "From your device",
+            snappedName ? `nearest is ${snappedName}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : "GPS on a phone, or your network on a computer";
 
   const triggerClass =
     variant === "field"
@@ -63,7 +111,10 @@ export function LocationSelector({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          setOpen((value) => !value);
+          setError(null);
+        }}
         title={location ? `${location.label}, ${location.city}` : "Choose a neighbourhood"}
       >
         <MapPin {...ICON} className="shrink-0 text-accent" />
@@ -104,7 +155,7 @@ export function LocationSelector({
           </p>
           <ul className="pb-1">
             {neighbourhoods.map((option) => {
-              const selected = option.id === location?.id;
+              const selected = option.id === location?.id && !usingDeviceLocation;
               return (
                 <li key={option.id}>
                   <button
@@ -124,13 +175,37 @@ export function LocationSelector({
               );
             })}
           </ul>
-          <div className="border-t border-line px-3 py-2.5">
-            <p className="text-[12px] text-ink-soft">
-              Use my current location
-              <span className="mt-0.5 block text-[11px] tracking-wide uppercase">
-                Soon
+          <div className="border-t border-line px-2 py-2">
+            <button
+              type="button"
+              onClick={() => void useDeviceLocation()}
+              disabled={locating}
+              className={cn(
+                "flex w-full items-start gap-2 rounded-[6px] px-2 py-2 text-left text-sm hover:bg-paper disabled:opacity-60",
+                usingDeviceLocation && "bg-accent-soft",
+              )}
+            >
+              <LocateFixed {...ICON} className="mt-0.5 shrink-0 text-accent" />
+              <span>
+                <span className="block text-ink">{locateTitle}</span>
+                <span className="mt-0.5 block text-[12px] text-ink-soft">
+                  {locateHint}
+                </span>
               </span>
-            </p>
+            </button>
+            {usingDeviceLocation && user?.lat != null && user?.lng != null ? (
+              <a
+                href={mapsCheckUrl({ lat: user.lat, lng: user.lng })}
+                target="_blank"
+                rel="noreferrer"
+                className="block px-2 pt-1 pb-1 text-[12px] text-ink-soft underline decoration-line underline-offset-2 hover:text-ink"
+              >
+                Check this point on a map
+              </a>
+            ) : null}
+            {error ? (
+              <p className="px-2 pt-1 pb-1 text-[12px] leading-4 text-accent">{error}</p>
+            ) : null}
           </div>
         </div>
       ) : null}

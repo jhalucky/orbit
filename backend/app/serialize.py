@@ -25,6 +25,7 @@ def neighbourhood_out(row: Neighbourhood | None) -> NeighbourhoodOut | None:
 
 def user_out(user: User) -> UserOut:
     membership = next(iter(user.memberships), None)
+    using_device = bool(user.using_device_location)
     return UserOut(
         id=user.id,
         email=user.email,
@@ -34,6 +35,11 @@ def user_out(user: User) -> UserOut:
         activeRole=user.active_role,
         locationId=user.location_id,
         location=neighbourhood_out(user.location),
+        lat=user.lat,
+        lng=user.lng,
+        usingDeviceLocation=using_device,
+        locationSource=user.location_source if user.location_source in ("gps", "network") else None,
+        locationAccuracyM=user.location_accuracy_m,
         businessId=membership.business_id if membership else None,
         businessName=membership.business.name if membership else None,
     )
