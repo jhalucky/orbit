@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Fraunces, Work_Sans } from "next/font/google";
-import { CustomerProvider } from "@/lib/customer-context";
+import { AppProvider } from "@/lib/app-context";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       className={`${fraunces.variable} ${workSans.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-paper font-sans text-ink">
-        <CustomerProvider>{children}</CustomerProvider>
+        <AppProvider>{children}</AppProvider>
       </body>
     </html>
   );

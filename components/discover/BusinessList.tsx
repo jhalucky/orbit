@@ -1,16 +1,16 @@
 "use client";
 
 import { BusinessCard } from "@/components/businesses/BusinessCard";
-import { useCustomer } from "@/lib/customer-context";
+import { useApp } from "@/lib/app-context";
 import { getAvailability } from "@/lib/hours";
 import type { Business } from "@/lib/types";
 
 interface BusinessListProps {
-  businesses: Array<Business & { distanceKm: number }>;
+  businesses: Business[];
 }
 
 export function BusinessList({ businesses }: BusinessListProps) {
-  const { isSaved, toggleSaved, location } = useCustomer();
+  const { isSaved, toggleSaved, location } = useApp();
 
   if (businesses.length === 0) {
     return (
@@ -18,7 +18,7 @@ export function BusinessList({ businesses }: BusinessListProps) {
         <p className="font-display text-xl text-ink">Nothing nearby matches that.</p>
         <p className="mt-2 max-w-md text-sm leading-6 text-ink-soft">
           Try another word, or pick a category. You&apos;re looking around{" "}
-          {location.label}.
+          {location?.label ?? "this area"}.
         </p>
       </div>
     );
@@ -42,7 +42,7 @@ export function BusinessList({ businesses }: BusinessListProps) {
           <p className="mt-1 text-[13px] text-ink-soft">
             {businesses.length}{" "}
             {businesses.length === 1 ? "business" : "businesses"} near{" "}
-            {location.label}
+            {location?.label ?? "you"}
           </p>
         </div>
         <p className="hidden text-[12px] text-ink-soft sm:block">
@@ -54,7 +54,7 @@ export function BusinessList({ businesses }: BusinessListProps) {
         <div className="md:col-span-2">
           <BusinessCard
             business={featured}
-            distanceKm={featured.distanceKm}
+            distanceKm={featured.distanceKm ?? 0}
             saved={isSaved(featured.id)}
             onToggleSaved={() => toggleSaved(featured.id)}
             featured
@@ -64,7 +64,7 @@ export function BusinessList({ businesses }: BusinessListProps) {
           <BusinessCard
             key={business.id}
             business={business}
-            distanceKm={business.distanceKm}
+            distanceKm={business.distanceKm ?? 0}
             saved={isSaved(business.id)}
             onToggleSaved={() => toggleSaved(business.id)}
           />

@@ -48,25 +48,60 @@ export interface Business {
   typicalResponseMinutes: number;
   monogram: string;
   mark: "fill" | "soft" | "line";
+  distanceKm?: number | null;
+  saved?: boolean;
+}
+
+export interface SessionUser {
+  id: string;
+  email: string;
+  name: string;
+  initials: string;
+  roles: string[];
+  activeRole: "customer" | "provider" | null;
+  locationId: string | null;
+  location: LocationOption | null;
+  businessId: string | null;
+  businessName: string | null;
+}
+
+export interface ConversationSummary {
+  id: string;
+  businessId: string;
+  businessName: string;
+  businessMonogram: string;
+  customerId: string;
+  customerName: string;
+  lastMessage: string | null;
+  lastMessageAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string | null;
+  senderName: string | null;
+  mine: boolean;
+  body: string;
+  kind: string;
+  requestId: string | null;
+  createdAt: string;
 }
 
 export interface ServiceRequest {
   id: string;
   title: string;
+  description: string;
   categoryLabel: string;
   businessId: string;
   businessName: string;
+  customerId: string;
+  customerName: string;
+  conversationId: string | null;
   status: RequestStatus;
-  /** Short human status shown in the UI, e.g. "Ready for pickup". */
   statusLabel: string;
+  createdAt: string;
   updatedAt: string;
-}
-
-export interface CurrentUser {
-  id: string;
-  name: string;
-  initials: string;
-  neighborhood: string;
 }
 
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {

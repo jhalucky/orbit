@@ -100,7 +100,7 @@ export function BusinessCard({
         <div className={cn("mt-4 flex flex-wrap items-center gap-2", featured && "md:mt-5")}>
           <Button
             size="sm"
-            href={`/messages?with=${business.slug}`}
+            href={`/messages?business=${business.id}`}
           >
             Message
           </Button>

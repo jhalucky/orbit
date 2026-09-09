@@ -1,14 +1,19 @@
 "use client";
 
-import { CATEGORIES } from "@/lib/seed";
+import type { Category } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 interface CategoryNavProps {
+  categories: Category[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }
 
-export function CategoryNav({ selectedId, onSelect }: CategoryNavProps) {
+export function CategoryNav({
+  categories,
+  selectedId,
+  onSelect,
+}: CategoryNavProps) {
   return (
     <nav aria-label="Service categories" className="mt-6 border-b border-line">
       <ul className="no-scrollbar -mx-4 flex gap-1 overflow-x-auto px-4 md:mx-0 md:px-0">
@@ -19,7 +24,7 @@ export function CategoryNav({ selectedId, onSelect }: CategoryNavProps) {
             onClick={() => onSelect(null)}
           />
         </li>
-        {CATEGORIES.map((category) => (
+        {categories.map((category) => (
           <li key={category.id}>
             <CategoryButton
               label={category.label}

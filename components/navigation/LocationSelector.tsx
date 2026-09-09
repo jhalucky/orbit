@@ -3,8 +3,7 @@
 import { ChevronDown, MapPin } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import { useCustomer } from "@/lib/customer-context";
-import { LOCATIONS } from "@/lib/seed";
+import { useApp } from "@/lib/app-context";
 import type { LocationOption } from "@/lib/types";
 
 const ICON = { size: 16, strokeWidth: 1.65 };
@@ -18,7 +17,7 @@ interface LocationSelectorProps {
 export function LocationSelector({
   variant = "sidebar",
 }: LocationSelectorProps) {
-  const { location, setLocation } = useCustomer();
+  const { location, setLocation, neighbourhoods } = useApp();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
@@ -65,7 +64,7 @@ export function LocationSelector({
         aria-expanded={open}
         aria-controls={listId}
         onClick={() => setOpen((value) => !value)}
-        title={`${location.label}, ${location.city}`}
+        title={location ? `${location.label}, ${location.city}` : "Choose a neighbourhood"}
       >
         <MapPin {...ICON} className="shrink-0 text-accent" />
         <span
@@ -74,7 +73,7 @@ export function LocationSelector({
             variant === "sidebar" && "hidden lg:inline",
           )}
         >
-          {location.label}
+          {location?.label ?? "Location"}
         </span>
         <ChevronDown
           {...ICON}
@@ -104,8 +103,8 @@ export function LocationSelector({
             Neighbourhood
           </p>
           <ul className="pb-1">
-            {LOCATIONS.map((option) => {
-              const selected = option.id === location.id;
+            {neighbourhoods.map((option) => {
+              const selected = option.id === location?.id;
               return (
                 <li key={option.id}>
                   <button

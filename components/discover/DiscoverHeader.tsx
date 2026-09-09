@@ -1,16 +1,16 @@
 "use client";
 
-import { useCustomer } from "@/lib/customer-context";
+import { useApp } from "@/lib/app-context";
 
 export function DiscoverHeader() {
-  const { location } = useCustomer();
+  const { location } = useApp();
 
   return (
     <header className="max-w-[40rem]">
       <p className="text-[12px] text-ink-soft">
         Discover
         <span className="mx-1.5 text-line">/</span>
-        {location.label}
+        {location?.label ?? "Nearby"}
       </p>
       <h1 className="mt-5 font-display text-[2.15rem] leading-[1.15] font-medium tracking-[-0.02em] text-ink md:text-[2.55rem]">
         Get things done nearby.

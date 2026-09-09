@@ -9,11 +9,10 @@ import {
   Settings,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { CURRENT_USER } from "@/lib/seed";
+import { useApp } from "@/lib/app-context";
 import { LocationSelector } from "@/components/navigation/LocationSelector";
 import { NavItem } from "@/components/navigation/NavItem";
 import { Wordmark } from "@/components/navigation/Wordmark";
-import Link from "next/link";
 
 const ICON = { size: 18, strokeWidth: 1.65 };
 
@@ -31,6 +30,7 @@ const SECONDARY = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useApp();
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-[72px] flex-col border-r border-line bg-paper md:flex lg:w-[240px]">
@@ -70,20 +70,21 @@ export function Sidebar() {
           />
         ))}
 
-        <Link
-          href="/settings"
-          className="mt-2 flex items-center justify-center gap-2.5 rounded-[6px] py-2 hover:bg-card lg:justify-start lg:px-2.5"
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="mt-2 flex w-full items-center justify-center gap-2.5 rounded-[6px] py-2 hover:bg-card lg:justify-start lg:px-2.5"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[20px] bg-ink text-[11px] font-medium tracking-wide text-paper">
-            {CURRENT_USER.initials}
+            {user?.initials ?? "?"}
           </span>
           <span className="hidden min-w-0 lg:block">
             <span className="block truncate text-[13px] text-ink">
-              {CURRENT_USER.name}
+              {user?.name ?? "Account"}
             </span>
             <span className="block text-[12px] text-ink-soft">Customer</span>
           </span>
-        </Link>
+        </button>
       </div>
     </aside>
   );
